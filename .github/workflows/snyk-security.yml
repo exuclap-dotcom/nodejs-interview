@@ -13,9 +13,9 @@
 # One-time setup (GitHub → Settings → Secrets and variables → Actions)
 #   Secret    SNYK_TOKEN                 Snyk auth token (service account token in production)
 #   Variable  SNYK_ORG                   Snyk Organization slug or ID, e.g. nova-bank-payments
-#   Variable  SNYK_SEVERITY_THRESHOLD    low | medium | high | critical   (default: high)
-#   Variable  SNYK_BLOCKING              true = vulnerabilities fail the build
-#                                        false = report only (rollout "wave 0")  (default: true)
+#   Variable  SNYK_SEVERITY_THRESHOLD    the rollout wave: critical = wave 0, high = wave 1 (default: high)
+#   Variable  SNYK_BLOCKING              true = issues above the threshold fail the build (default: true)
+#                                        false = report only, e.g. while a new pipeline is being set up
 
 name: Snyk Security
 
