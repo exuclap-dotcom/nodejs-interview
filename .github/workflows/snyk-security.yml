@@ -1,21 +1,21 @@
 # .github/workflows/snyk-security.yml
 # Nova Bank – Snyk security scans in CI (demo built on cgibbs-snyk/nodejs-interview)
 #
-# What it does
-#   • Pull requests  → `snyk test`  : security gate. Fails the build on fixable issues
-#                                      at/above the agreed severity threshold.
-#   • Push to main   → `snyk monitor`: snapshots the dependency tree into the Snyk UI so
-#                                      the team is alerted when NEW vulnerabilities are
-#                                      disclosed against code that is already merged.
-#   • Every run      → `snyk code test` (SAST) in report-only mode – covers the
-#                                      first-party / AI-written code itself.
+# What it does – the RELEASE GATE (the GitHub integration's PR checks stay the developer gate)
+#   • Every build   → `snyk test`   : fails on high/critical issues that have a fix.
+#                                     Start report-only (SNYK_BLOCKING=false), then switch to true.
+#                                     snyk test checks the whole project; for "new issues only" use
+#                                     snyk-delta or time-limited ignores with a reason and expiry.
+#   • Push to main  → `snyk monitor`: records what shipped in the owning team's Organization and
+#                                     alerts the team on NEW vulnerabilities disclosed later.
+#   • Every run     → `snyk code test` (SAST), report-only – first-party / AI-written code.
 #
 # One-time setup (GitHub → Settings → Secrets and variables → Actions)
 #   Secret    SNYK_TOKEN                 Snyk auth token (service account token in production)
-#   Variable  SNYK_ORG                   Snyk Organization slug or ID, e.g. nova-bank-payments
-#   Variable  SNYK_SEVERITY_THRESHOLD    the rollout wave: critical = wave 0, high = wave 1 (default: high)
+#   Variable  SNYK_ORG                   owning team's Organization slug or ID (from the ownership map)
+#   Variable  SNYK_SEVERITY_THRESHOLD    lowest severity that blocks: high = high and critical (default: high)
 #   Variable  SNYK_BLOCKING              true = issues above the threshold fail the build (default: true)
-#                                        false = report only, e.g. while a new pipeline is being set up
+#                                        false = report only: use for the first days of each new pipeline
 
 name: Snyk Security
 
@@ -37,10 +37,10 @@ env:
 
 jobs:
   # ---------------------------------------------------------------------------
-  # 1) SECURITY GATE – snyk test (runs on PRs, pushes and manual runs)
+  # 1) RELEASE GATE – snyk test (runs on PRs, pushes to main and manual runs)
   # ---------------------------------------------------------------------------
   snyk-test:
-    name: Snyk test (open source gate)
+    name: Snyk test (release gate)
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -98,12 +98,12 @@ jobs:
           path: snyk-report.html
 
   # ---------------------------------------------------------------------------
-  # 2) CONTINUOUS MONITORING – snyk monitor (only for code that reached main)
+  # 2) RECORD WHAT SHIPPED – snyk monitor (only for code that reached main)
   #    Separate job with no `needs:` → it still runs when the gate fails, so the
   #    Snyk UI always reflects what is actually on main.
   # ---------------------------------------------------------------------------
   snyk-monitor:
-    name: Snyk monitor (snapshot to Snyk UI)
+    name: Snyk monitor (record what shipped)
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
@@ -118,7 +118,7 @@ jobs:
       - name: Install Snyk CLI
         run: npm install --global snyk@latest
 
-      - name: Snyk monitor – record snapshot with ownership metadata
+      - name: Snyk monitor – record release snapshot with labels
         run: |
           snyk monitor \
             --org="$SNYK_ORG" \
@@ -126,7 +126,7 @@ jobs:
             --project-environment=backend,external \
             --project-lifecycle=production \
             --project-business-criticality=critical
-          # Enterprise plan (Nova Bank) – add team ownership tags:
+          # Optional, Enterprise plan – extra labels (ownership itself comes from the team's Organization):
           #   --project-tags=team=payments,owner=payments-champion,app=nova-payments-api
 
   # ---------------------------------------------------------------------------
