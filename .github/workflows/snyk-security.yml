@@ -152,3 +152,34 @@ jobs:
 
       - name: Snyk code test
         run: snyk code test --org="$SNYK_ORG" --severity-threshold=high
+
+  # ---------------------------------------------------------------------------
+  # 4) CONTAINER IMAGE – snyk container test, report-only for now
+  #    Builds the app's image from the Dockerfile and scans it: OS packages in
+  #    the base image (node:18.13.0) plus the app's libraries inside the image.
+  # ---------------------------------------------------------------------------
+  snyk-container:
+    name: Snyk Container (image, report-only)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Install Snyk CLI
+        run: npm install --global snyk@latest && snyk --version
+
+      - name: Build the container image
+        run: docker build -t nova-goof:${{ github.sha }} .
+
+      - name: Snyk container test
+        run: |
+          snyk container test nova-goof:${{ github.sha }} \
+            --file=Dockerfile \
+            --org="$SNYK_ORG" \
+            --severity-threshold=high
