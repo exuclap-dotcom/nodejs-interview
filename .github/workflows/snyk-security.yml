@@ -116,7 +116,7 @@ jobs:
           node-version: 24
 
       - name: Install Snyk CLI
-        run: npm install --global snyk@latest
+        run: npm install --global snyk@latest && snyk --version
 
       - name: Snyk monitor – record release snapshot with labels
         run: |
@@ -148,7 +148,6 @@ jobs:
           node-version: 24
 
       - name: Install Snyk CLI
-        run: npm install --global snyk@latest
-
+       run: npm install --global snyk@latest && snyk --version
       - name: Snyk code test
         run: snyk code test --org="$SNYK_ORG" --severity-threshold=high
