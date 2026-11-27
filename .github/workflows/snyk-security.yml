@@ -92,7 +92,7 @@ jobs:
 
       - name: Upload report as build artifact
         if: always() && hashFiles('snyk-report.html') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: snyk-open-source-report
           path: snyk-report.html
